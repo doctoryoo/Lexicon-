@@ -1,0 +1,138 @@
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+/**
+ * represents a single node of the Trie and implement Iterable
+ */
+public class LexiconNode implements Iterable<LexiconNode> {
+    private char value;
+    private List<LexiconNode> children;
+    private boolean isWord;
+
+    /**
+     * constructor of the Node that initializes value, isWord, and children
+     *
+     * @param value input a value for the Node in the Trie
+     */
+    public LexiconNode(char value) {
+        this.value = value;
+        this.children = new ArrayList<>();
+        this.isWord = false;
+    }
+
+    /**
+     * returns the Nodes value
+     *
+     * @return the value of the Node
+     */
+    public char getValue() {
+        return value;
+    }
+
+    /**
+     * returns if the Node is the end of a word or not
+     *
+     * @return true if it's a word and false if not
+     */
+    public boolean isWord() {
+        return isWord;
+    }
+
+    /**
+     * set the Node to either a word or not a word depending on input
+     *
+     * @param isWord true if node is being set to a valid word and false if not
+     */
+    public void setIsWord(boolean isWord) {
+        this.isWord = isWord;
+    }
+
+    /**
+     * adds a child to the Node in alphabetic order
+     *
+     * @param c the new character to be added
+     * @return the index of the character if it already exists or the new Node that was made
+     */
+    public LexiconNode addChild(char c) {
+        int index = linearSearch(c);
+
+        if (index >= 0) {
+            return children.get(index);
+        } else {
+            LexiconNode newNode = new LexiconNode(c);
+            children.add(-index - 1, newNode);
+            return newNode;
+        }
+    }
+
+    /**
+     * returns the index of a given character from the list of children of a node or null if
+     * it does not exist
+     *
+     * @param c given character to be located
+     * @return index of character in list or null, null if it does not exist
+     */
+    public LexiconNode getChild(char c) {
+        int index = linearSearch(c);
+
+        if (index >= 0) {
+            return children.get(index);
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * remove a given character from the children
+     * not used because I could not figure out the extra credit portion
+     *
+     * @param c input character
+     * @return the removed character or null if it did not exist
+     */
+    public LexiconNode removeChild(char c) {
+        int index = linearSearch(c);
+
+        if (index >= 0) {
+            return children.remove(index);
+        }
+        return null;
+    }
+
+    /**
+     * returns whether a given character exists within the nodes children
+     *
+     * @param c input character
+     * @return true or false indicating whether the character is part of the children or not
+     */
+    public boolean hasChild(char c) {
+        return linearSearch(c) >= 0;
+    }
+
+    /**
+     * computes the correct index of the given character to fit in the children list of a node
+     *
+     * @param  c given character to find index of
+     * @return the value of index if the character already exists in the node, the negative value if
+     *         it does not
+     */
+    private int linearSearch(char c) {
+        for (int i = 0; i < children.size(); i++) {
+            if (children.get(i).getValue() >= c) {
+                if (children.get(i).getValue() == c) {
+                    return i;
+                }
+                else {
+                    return -(i + 1); // returns negative to indicate that it does not yet exist
+                }
+            }
+        }
+        return -(children.size() + 1); // same reason as above as to why negative
+    }
+
+    @Override
+    public Iterator<LexiconNode> iterator() {
+        return children.iterator();
+    }
+}
+  

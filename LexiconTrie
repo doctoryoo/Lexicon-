@@ -1,0 +1,303 @@
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * the trie class that implements the Lexicon and uses the LexiconNode class
+ */
+public class LexiconTrie implements Lexicon {
+    private LexiconNode root;
+    private int wordCount;
+
+    public LexiconTrie() {
+        root = new LexiconNode('\0');
+        wordCount = 0;
+    }
+
+    /**
+     * adds a word to the Trie class
+     *
+     * @param word The lowercase word to add to the lexicon
+     * @return true if word is new, false if not
+     */
+    @Override
+    public boolean addWord(String word) {
+        LexiconNode currentNode = root;
+
+        boolean isNewWord = false;
+
+        for (char c : word.toCharArray()) {
+            if (!currentNode.hasChild(c)) {
+                isNewWord = true;
+            }
+            currentNode = currentNode.addChild(c);
+        }
+
+        if (!currentNode.isWord()) {
+            isNewWord = true;
+            currentNode.setIsWord(true);
+            wordCount++;
+        }
+
+        return isNewWord;
+    }
+
+    /**
+     * adds words from a file
+     *
+     * @param filename The name of the file to read.
+     * @return the number of added words
+     */
+    @Override
+    public int addWordsFromFile(String filename) {
+        int addedWords = 0;
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (addWord(line.toLowerCase())) {
+                    addedWords++;
+                }
+            }
+        }
+
+        catch (IOException e) {
+            return -1;
+        }
+
+        return addedWords;
+    }
+
+    /**
+     * removes a word from the trie class
+     *
+     * @param word The lowercase word to remove from the lexicon
+     * @return true if an existing word was removed, false if the word did not exist in the Trie
+     */
+    @Override
+    public boolean removeWord(String word) {
+        LexiconNode currentNode = root;
+
+        boolean isRemoved = false;
+
+        for (char c : word.toCharArray()) {
+            if (!currentNode.hasChild(c)) {
+                return false;
+            }
+            currentNode = currentNode.getChild(c);
+        }
+
+        if (currentNode.isWord()) {
+            currentNode.setIsWord(false);
+            wordCount--;
+            isRemoved = true;
+        }
+
+        return isRemoved;
+    }
+
+    /**
+     * tells you number of words in the Trie
+     *
+     * @return integer representing number of unique words in the trie
+     */
+    @Override
+    public int numWords() {
+        return wordCount;
+    }
+
+    /**
+     * tells whether the lexicon contains the word or not
+     *
+     * @param word The lowercase word to lookup in the lexicon
+     * @return true if the trie contains the word, false if not
+     */
+    @Override
+    public boolean containsWord(String word) {
+        LexiconNode currentNode = root;
+
+        for (char c : word.toCharArray()) {
+            if (!currentNode.hasChild(c)) {
+                return false;
+            }
+            currentNode = currentNode.getChild(c);
+        }
+
+        return currentNode.isWord();
+    }
+
+    /**
+     * checks if a given prefix is a currently contained within the trie
+     * @param prefix
+     *          The lowercase prefix to lookup in the lexicon.
+     * @return true if there is, false if not
+     */
+    @Override
+    public boolean containsPrefix(String prefix) {
+        LexiconNode currentNode = root;
+
+        for (char c : prefix.toCharArray()) {
+            if (!currentNode.hasChild(c)) {
+                return false;
+            }
+            currentNode = currentNode.getChild(c);
+        }
+
+        return true;
+    }
+
+    /**
+     * helper method that traverses the trie in lexicographic order for the iterator method
+     *
+     * @param node the given node input (it will always start with root)
+     * @param prefix prefix of words visited so far
+     * @param words list of words being collected
+     */
+    private void traverseTrie(LexiconNode node, String prefix, List<String> words) {
+        if (node.isWord()) {
+            words.add(prefix);
+        }
+
+        for (LexiconNode child : node) {
+            String newPrefix = prefix + child.getValue();
+            traverseTrie(child, newPrefix, words);
+        }
+    }
+
+    /**
+     * the actual iterator implementation that collects word through iterating
+     *
+     * @return an array list of the words that was iterated over
+     */
+    @Override
+    public Iterator<String> iterator() {
+        List<String> words = new ArrayList<>();
+        String prefix = "";
+        traverseTrie(root, prefix, words);
+        return words.iterator();
+    }
+
+    /**
+     * generates suggestions based on a given string and the maximum distance of editing
+     * uses the suggestCorrectionsHelper method to traverse and collect suggestions
+     *
+     * @param target
+     *          The target word to be corrected.
+     * @param maxDistance
+     *          The maximum word distance of suggested corrections.
+     * @return the set of corrections
+     */
+    @Override
+    public Set<String> suggestCorrections(String target, int maxDistance)
+    {Set<String> suggestions = new HashSet<>();
+        String prefix = "";
+
+        suggestCorrectionsHelper(root, target, maxDistance, prefix, suggestions);
+
+        return suggestions;
+    }
+
+    /**
+     * helper method that recursively traverses the trie to collect suggestions
+     * @param currentNode current node (starts with root)
+     * @param target target string to generate corrections for
+     * @param maxDistance maximum distance the editing can go
+     * @param prefix current prefix generated during traversal
+     * @param suggestions the set of suggest corrections
+     */
+    private void suggestCorrectionsHelper(LexiconNode currentNode, String target, int maxDistance,
+                                       String prefix, Set<String> suggestions) {
+        if (prefix.length() == target.length()) {
+            int distance = 0;
+            for (int i = 0; i < target.length(); i++) {
+                if (target.charAt(i) != prefix.charAt(i)) {
+                    distance++;
+                }
+            }
+            if (distance <= maxDistance && currentNode.isWord()) {
+                suggestions.add(prefix);
+            }
+            return;
+        }
+
+        for (LexiconNode child : currentNode) {
+            String newPrefix = prefix + child.getValue();
+            int distance = 0;
+            for (int i = 0; i < newPrefix.length(); i++) {
+                if (target.charAt(i) != newPrefix.charAt(i)) {
+                    distance++;
+                }
+            }
+            if (distance <= maxDistance) {
+                if (newPrefix.length() < target.length()) {
+                    suggestCorrectionsHelper(child, target, maxDistance, newPrefix, suggestions);
+                } else if (child.isWord()) {
+                    suggestions.add(newPrefix);
+                }
+            }
+        }
+    }
+
+    /**
+     * matching method that takes in a specific wildcard and creates matching words based on
+     * a lexicon that you made or inputted from a file
+     *
+     * @param pattern
+     *          The regular expression pattern to match.
+     * @return the hashset of the new matches
+     */
+    @Override
+    public Set<String> matchRegex(String pattern) {
+        Set<String> matches = new HashSet<>();
+        matchRegexHelper(root, pattern, "", matches);
+        return matches;
+    }
+
+    /**
+     * the actual implementation of the match regex method
+     *
+     * @param currentNode the input node (will always start with root)
+     * @param pattern the inputted string that will show which match to look for
+     * @param prefix current prefix of the current word
+     * @param matches the actual matches that are hash set
+     */
+    private void matchRegexHelper(LexiconNode currentNode, String pattern, String prefix,
+                                  Set<String> matches) {
+        if (pattern.isEmpty()) {
+            if (currentNode.isWord()) {
+                matches.add(prefix);
+            }
+            return;
+        }
+
+        char c = pattern.charAt(0);
+        String remainingPattern = pattern.substring(1);
+
+        if (c == '_') {
+            for (LexiconNode child : currentNode) {
+                matchRegexHelper(child, remainingPattern, prefix + child.getValue(), matches);
+            }
+        } else if (c == '?') {
+            matchRegexHelper(currentNode, remainingPattern, prefix, matches);
+            for (LexiconNode child : currentNode) {
+                matchRegexHelper(child, remainingPattern, prefix + child.getValue(), matches);
+            }
+        } else if (c == '*') {
+            matchRegexHelper(currentNode, remainingPattern, prefix, matches);
+            for (LexiconNode child : currentNode) {
+                matchRegexHelper(child, pattern, prefix + child.getValue(), matches);
+            }
+        } else {
+            LexiconNode child = currentNode.getChild(c);
+            if (child != null) {
+                matchRegexHelper(child, remainingPattern, prefix + c, matches);
+            }
+        }
+    }
+
+}
